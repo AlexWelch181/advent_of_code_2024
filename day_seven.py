@@ -37,7 +37,7 @@ with open('day_seven_in.txt') as file:
         for idx in range(len(nums)-1, -1, -1):
             tmp_results = []
             for res in results:
-                if res - nums[idx] >= 0:
+                if res - nums[idx] > 0:
                     tmp_results.append(res - nums[idx])
                 if res % nums[idx] == 0:
                     tmp_results.append(res // nums[idx])
@@ -47,7 +47,7 @@ with open('day_seven_in.txt') as file:
                         val = str_target[:len(str_target) - len(str_num)]
                         tmp_results.append(int(val) if val else 0)
             results = tmp_results
-        if 1 in results or 0 in results:
+        if 1 in results:
             out += int(target)
     print(out)
 print(time.time() - start)
