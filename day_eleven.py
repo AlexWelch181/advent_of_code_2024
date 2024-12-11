@@ -16,4 +16,5 @@ def stone_sum(val, blinks):
     else:
         return stone_sum(2024*val, blinks-1)
 
+print(sum([stone_sum(num, 25) for num in nums]))
 print(sum([stone_sum(num, 75) for num in nums]))
