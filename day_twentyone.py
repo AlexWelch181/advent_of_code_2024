@@ -1,4 +1,4 @@
-from collections import deque
+from collections import deque, defaultdict
 from itertools import product
 from functools import cache
 
@@ -9,27 +9,31 @@ num_pad = [['7','8','9'],
            ['1','2','3'],
            [-1,'0','A']]
 
-dir_pad = [[-1,'^','A'],
+dpad = [[-1,'^','A'],
            ['<','v','>']]
 
-
-dpad_dic = {}
-for r in range(len(dir_pad)):
-    for c in range(len(dir_pad[0])):
-        if dir_pad[r][c] != -1:
-            q = deque([(r,c,'')])
-            seen = {(r,c)}
-            dpad_dic[dir_pad[r][c], dir_pad[r][c]] = 'A'
-            while q:
-                rr, cc, moves = q.popleft()
-                for nr, nc, nm in [(rr-1,cc,'^'),(rr,cc+1,'>'),(rr+1,cc,'v'),(rr,cc-1,'<')]:
-                    if nr < 0 or nc < 0 or nr >= len(dir_pad) or nc >= len(dir_pad[0]): continue
-                    if (nr, nc) in seen: continue
-                    if dir_pad[nr][nc] == -1: continue
-                    seen.add((nr,nc))
-                    dpad_dic[(dir_pad[r][c],dir_pad[nr][nc])] = moves + nm + 'A'
-                    if moves and moves[-1] == nm: q.appendleft((nr,nc,moves+nm))
-                    else: q.append((nr,nc,moves+nm))
+def create_dict(grid):
+    dic = defaultdict(list)
+    for r in range(len(grid)):
+        for c in range(len(grid[0])):
+            if grid[r][c] != -1:
+                q = deque([(r,c,'',{(r,c)})])
+                dic[grid[r][c], grid[r][c]] = ['A']
+                while q:
+                    rr, cc, moves, seen = q.popleft()
+                    for nr, nc, nm in [(rr-1,cc,'^'),(rr,cc+1,'>'),(rr+1,cc,'v'),(rr,cc-1,'<')]:
+                        if nr < 0 or nc < 0 or nr >= len(grid) or nc >= len(grid[0]): continue
+                        if (nr, nc) in seen: continue
+                        if grid[nr][nc] == -1: continue
+                        nseen = seen.copy()
+                        nseen.add((nr,nc)) 
+                        if dic[(grid[r][c],grid[nr][nc])] and len(moves + nm + 'A') > len(list(dic[(grid[r][c],grid[nr][nc])])[0]): continue
+                        if dic[(grid[r][c],grid[nr][nc])] and len(moves + nm + 'A') < len(list(dic[(grid[r][c],grid[nr][nc])])[0]):
+                            dic[(grid[r][c],grid[nr][nc])] = []
+                        dic[(grid[r][c],grid[nr][nc])].append(moves + nm + 'A')
+                        if moves and moves[-1] == nm: q.appendleft((nr,nc,moves+nm,nseen))
+                        else: q.append((nr,nc,moves+nm,nseen))
+    return dic
 
 def solve(r, c, target):
     q = deque([(r,c,'',{(r,c)})])
@@ -56,6 +60,23 @@ def solve(r, c, target):
                 else: q.append((nr,nc,moves+nm,nseen))
     return (tr,tc), possible
 
+
+dpad_dic = create_dict(dpad)
+numpad_dic = create_dict(num_pad)
+dpad_lengths = {key: len(val[0]) for key, val in dpad_dic.items()}
+
+@cache
+def compute(x, y, depth=2):
+    if depth == 1:
+        return dpad_lengths[(x,y)]
+    optimal = float('inf')
+    for seq in dpad_dic[(x,y)]:
+        length = 0
+        for a, b in zip('A' + seq, seq):
+            length += compute(a, b, depth-1)
+        optimal = min(optimal, length)
+    return optimal
+
 res = 0
 for code in codes:
     r, c = 3, 2
@@ -65,16 +86,13 @@ for code in codes:
         string_choice.append(p)
     combinations = [''.join(combo) for combo in product(*string_choice)]
     options = []
+    optimal = float('inf')
     for combo in combinations:
-        for i in range(2):
-            out = ''
-            combo = 'A' + combo
-            for idx in range(1, len(combo)):
-                out += dpad_dic[(combo[idx-1], combo[idx])]
-            combo = out
-        options.append(len(combo))
-    res += min(options) * int(''.join(x for x in code if x.isdigit()))
-
+        length = 0
+        for x, y in zip('A' + combo, combo):
+            length += compute(x, y, 25)
+        optimal = min(optimal, length)
+    res += optimal * int(''.join(x for x in code if x.isdigit()))
 print(res)
         
         
